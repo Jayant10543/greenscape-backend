@@ -51,10 +51,10 @@ Please provide a comprehensive garden plan in the following JSON format only, no
 }`;
 
     console.log("Calling Claude API...");
-
     console.log("API key length:", process.env.ANTHROPIC_API_KEY?.length);
-console.log("API key starts with:", process.env.ANTHROPIC_API_KEY?.slice(0, 15));
-console.log("API key ends with:", process.env.ANTHROPIC_API_KEY?.slice(-6));
+    console.log("API key starts with:", process.env.ANTHROPIC_API_KEY?.slice(0, 15));
+    console.log("API key ends with:", process.env.ANTHROPIC_API_KEY?.slice(-6));
+
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
