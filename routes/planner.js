@@ -4,9 +4,21 @@ const fetch = require("node-fetch");
 
 router.post("/generate", async (req, res) => {
   try {
-    const { length, width, gardenType, preference, budget } = req.body;
+    const { length, width, gardenType, preference, budget, city, soilType, weather } = req.body;
 
-    console.log("Planner request received:", { length, width, gardenType, preference, budget });
+    console.log("Planner request received:", { length, width, gardenType, preference, budget, city, soilType, weather });
+
+    const locationInfo = city
+      ? `Location: ${city}, India`
+      : `Location: India (general)`;
+
+    const weatherInfo = weather
+      ? `Current Weather: ${weather.temperature}°C, ${weather.description}, Humidity: ${weather.humidity}%`
+      : "";
+
+    const soilInfo = soilType && soilType !== "Don't know"
+      ? `Soil Type: ${soilType}`
+      : "";
 
     const prompt = `You are an expert Indian garden landscape designer. Create a detailed garden layout plan for the following:
 
@@ -14,11 +26,15 @@ Plot Size: ${length} x ${width} feet (${parseInt(length) * parseInt(width)} sq f
 Garden Type: ${gardenType}
 Plant Preference: ${preference}
 Budget: ${budget}
-Location: India (tropical/subtropical climate)
+${locationInfo}
+${weatherInfo}
+${soilInfo}
+
+Consider the local climate zone for ${city || "India"} when recommending plants, planting seasons, and watering schedules. Account for the current weather conditions in your immediate recommendations.
 
 Please provide a comprehensive garden plan in the following JSON format only, no other text:
 {
-  "summary": "2-3 sentence overview of the garden plan",
+  "summary": "2-3 sentence overview of the garden plan, mentioning the location's climate",
   "zones": [
     {
       "name": "Zone name",
@@ -47,14 +63,10 @@ Please provide a comprehensive garden plan in the following JSON format only, no
   },
   "tips": ["tip1", "tip2", "tip3", "tip4"],
   "estimatedCost": "cost range in INR",
-  "wateringSchedule": "watering frequency and amount"
+  "wateringSchedule": "watering frequency and amount, considering current weather"
 }`;
 
     console.log("Calling Claude API...");
-    console.log("API key length:", process.env.ANTHROPIC_API_KEY?.length);
-    console.log("API key starts with:", process.env.ANTHROPIC_API_KEY?.slice(0, 15));
-    console.log("API key ends with:", process.env.ANTHROPIC_API_KEY?.slice(-6));
-
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -72,7 +84,6 @@ Please provide a comprehensive garden plan in the following JSON format only, no
 
     const data = await response.json();
     console.log("Claude response status:", response.status);
-    console.log("Claude response data:", JSON.stringify(data));
 
     if (data.error) {
       console.error("Claude API error:", data.error);
