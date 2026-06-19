@@ -77,7 +77,7 @@ Please provide a comprehensive garden plan in the following JSON format only, no
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 2000,
+        max_tokens: 4096,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -95,9 +95,27 @@ Please provide a comprehensive garden plan in the following JSON format only, no
       return res.status(500).json({ error: "No response from AI" });
     }
 
+    if (data.stop_reason === "max_tokens") {
+      console.error("Claude response was truncated (hit max_tokens).");
+      return res.status(500).json({
+        error: "AI response was cut off before completing. Try a smaller plot size, or we can raise the token limit further.",
+      });
+    }
+
     const text = data.content[0].text;
     const clean = text.replace(/```json|```/g, "").trim();
-    const parsed = JSON.parse(clean);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch (parseErr) {
+      console.error("Failed to parse Claude response as JSON:", parseErr.message);
+      console.error("Raw text from Claude:", text);
+      return res.status(500).json({
+        error: "AI returned a response that wasn't valid JSON. Please try again.",
+      });
+    }
+
     res.json(parsed);
 
   } catch (err) {
