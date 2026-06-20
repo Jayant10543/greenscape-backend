@@ -6,8 +6,8 @@ router.post("/analyze", express.json({ limit: "12mb" }), async (req, res) => {
   try {
     const { image, mediaType, plantName } = req.body;
 
-    if (!image) {
-      return res.status(400).json({ error: "No image provided" });
+    if (!image || typeof image !== "string" || image.trim().length < 100) {
+      return res.status(400).json({ error: "No valid image provided. Please upload a photo." });
     }
 
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];

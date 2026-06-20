@@ -6,6 +6,19 @@ router.post("/generate", async (req, res) => {
   try {
     const { length, width, gardenType, preference, budget, city, soilType, weather } = req.body;
 
+    const lengthNum = parseFloat(length);
+    const widthNum = parseFloat(width);
+
+    if (!lengthNum || !widthNum || lengthNum <= 0 || widthNum <= 0) {
+      return res.status(400).json({ error: "Plot length and width must be positive numbers." });
+    }
+    if (lengthNum > 1000 || widthNum > 1000) {
+      return res.status(400).json({ error: "Plot dimensions seem too large. Please enter a realistic size in feet." });
+    }
+    if (!gardenType || !preference || !budget) {
+      return res.status(400).json({ error: "Garden type, preference, and budget are required." });
+    }
+
     console.log("Planner request received:", { length, width, gardenType, preference, budget, city, soilType, weather });
 
     const locationInfo = city
