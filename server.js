@@ -26,6 +26,9 @@ const PORT = process.env.PORT || 5000;
 const plannerRoutes = require("./routes/planner");
 app.use("/api/planner", plannerRoutes);
 
+const diagnoseRoutes = require("./routes/diagnose");
+app.use("/api/diagnose", diagnoseRoutes);
+
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
