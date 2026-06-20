@@ -16,17 +16,22 @@ router.post("/analyze", express.json({ limit: "12mb" }), async (req, res) => {
     console.log("Disease detection request received. Plant name hint:", plantName || "(none)");
 
     const plantContext = plantName
-      ? `The user says this is a ${plantName} plant. `
-      : "";
+      ? `The user says this is a ${plantName} plant. Trust this name and focus on diagnosing health/disease rather than re-identifying the species. `
+      : "The user did NOT provide a plant name, so you'll need to identify the species yourself from the photo alone. ";
+
+    const idInstruction = plantName
+      ? `"plantIdentified": "${plantName}"`
+      : `"plantIdentified": "your best guess, prefixed with 'Possibly' if you are not highly confident (e.g. 'Possibly Clivia (Bush Lily)') — identifying species from a single close-up photo is genuinely hard, so be honest about uncertainty rather than stating a guess as fact"`;
 
     const prompt = `You are an expert plant pathologist helping Indian home gardeners. ${plantContext}Look closely at this photo of a plant and assess its health.
 
 Please respond in the following JSON format only, no other text:
 {
-  "plantIdentified": "your best guess at the plant species/name, or the name provided",
+  ${idInstruction},
+  "plantIdentificationConfidence": "High, Medium, or Low (how sure are you about the species itself, separate from the disease confidence below)",
   "isHealthy": true or false,
   "disease": "name of the disease/pest/deficiency detected, or null if healthy",
-  "confidence": "High, Medium, or Low",
+  "confidence": "High, Medium, or Low (how sure are you about the disease/health assessment)",
   "symptoms": ["symptom1 visible in the photo", "symptom2"],
   "severity": "Mild, Moderate, or Severe (omit reasoning, just the word; null if healthy)",
   "cure": {
@@ -37,6 +42,8 @@ Please respond in the following JSON format only, no other text:
   "organicTreatment": "a home-remedy / organic treatment option suited to Indian households, or null if healthy",
   "summary": "2-3 sentence plain-language summary of what's wrong and what to do, written for a beginner gardener"
 }
+
+Note: disease/symptom diagnosis is usually reliable even without species certainty, since symptoms like leaf spots, wilting, and discoloration are visually distinct. Don't let species uncertainty lower your confidence in the health assessment unless the photo itself is genuinely unclear.
 
 If the photo does not clearly show a plant, or is too unclear to assess, set "disease" to "Unclear" and explain in "summary" what a better photo would need (e.g. closer to the leaves, better lighting).`;
 
