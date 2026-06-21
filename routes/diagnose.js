@@ -1,6 +1,21 @@
 const express = require("express");
 const router = express.Router();
 const fetch = require("node-fetch");
+const jwt = require("jsonwebtoken");
+const DiagnoseHistory = require("../models/diagnoseHistory");
+
+const JWT_SECRET = process.env.JWT_SECRET || "greenscape_secret_key";
+
+function getUserIdFromToken(req) {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) return null;
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return decoded.userId;
+  } catch {
+    return null;
+  }
+}
 
 router.post("/analyze", express.json({ limit: "12mb" }), async (req, res) => {
   try {
@@ -117,9 +132,59 @@ If the photo does not clearly show a plant, or is too unclear to assess, set "di
 
     res.json(parsed);
 
+    const userId = getUserIdFromToken(req);
+    if (userId) {
+      DiagnoseHistory.create({
+        userId,
+        image,
+        mediaType: finalMediaType,
+        plantNameInput: plantName || "",
+        ...parsed,
+      }).catch((err) => {
+        console.error("Failed to save diagnose history:", err.message);
+      });
+    }
+
   } catch (err) {
     console.error("Disease detection error:", err);
     res.status(500).json({ error: "Failed to analyze plant photo", details: err.message });
+  }
+});
+
+router.get("/history", async (req, res) => {
+  try {
+    const userId = getUserIdFromToken(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Please log in to view your diagnosis history." });
+    }
+
+    const history = await DiagnoseHistory.find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(50);
+
+    res.json(history);
+  } catch (err) {
+    console.error("Fetch history error:", err);
+    res.status(500).json({ error: "Failed to fetch history" });
+  }
+});
+
+router.delete("/history/:id", async (req, res) => {
+  try {
+    const userId = getUserIdFromToken(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Please log in." });
+    }
+
+    const entry = await DiagnoseHistory.findOneAndDelete({ _id: req.params.id, userId });
+    if (!entry) {
+      return res.status(404).json({ error: "History entry not found." });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Delete history error:", err);
+    res.status(500).json({ error: "Failed to delete history entry" });
   }
 });
 
