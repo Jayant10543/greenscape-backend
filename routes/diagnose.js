@@ -2,10 +2,18 @@ const express = require("express");
 const router = express.Router();
 const fetch = require("node-fetch");
 const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
 const DiagnoseHistory = require("../models/diagnoseHistory");
 
 const JWT_SECRET = process.env.JWT_SECRET || "greenscape_secret_key";
 
+const analyzeLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many AI requests. Please wait a few minutes and try again." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 function getUserIdFromToken(req) {
   try {
     const token = req.headers.authorization?.split(" ")[1];
@@ -17,7 +25,7 @@ function getUserIdFromToken(req) {
   }
 }
 
-router.post("/analyze", express.json({ limit: "12mb" }), async (req, res) => {
+router.post("/analyze", analyzeLimiter, express.json({ limit: "12mb" }), async (req, res) => {
   try {
     const { image, mediaType, plantName } = req.body;
 

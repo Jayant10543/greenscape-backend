@@ -1,9 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const fetch = require("node-fetch");
+const rateLimit = require("express-rate-limit");
 
-router.post("/generate", async (req, res) => {
-  try {
+const generateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: "Too many AI requests. Please wait a few minutes and try again." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post("/generate", generateLimiter, async (req, res) => {  try {
     const { length, width, gardenType, preference, budget, city, soilType, weather } = req.body;
 
     const lengthNum = parseFloat(length);
