@@ -101,7 +101,7 @@ Please provide a comprehensive garden plan in the following JSON format only, no
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 4096,
+        max_tokens: 8192,
         messages: [{ role: "user", content: prompt }],
       }),
     });
