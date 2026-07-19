@@ -53,6 +53,8 @@ ${soilInfo}
 
 Consider the local climate zone for ${city || "India"} when recommending plants, planting seasons, and watering schedules. Account for the current weather conditions in your immediate recommendations.
 
+LAYOUT INSTRUCTIONS: Imagine the plot as a 12x12 grid (144 cells) viewed from above, where col 0 is the left/west edge and row 0 is the top/back of the plot. For each zone, provide a "layout" object with integer grid coordinates: col (0-11, left position), row (0-11, top position), w (width in cells, 1-12), h (height in cells, 1-12). Place zones like a real landscape designer: put pathways as thin strips (w or h of 1-2) that connect areas, keep the lawn or largest area as one big block, tuck sitting/decorative areas into corners. Zones must NOT overlap, and every zone must fit fully inside the 12x12 grid (col + w <= 12 and row + h <= 12). Try to fill most of the grid. The total cell area of each zone should roughly match its share of the real square footage.
+
 Please provide a comprehensive garden plan in the following JSON format only, no other text:
 {
   "summary": "2-3 sentence overview of the garden plan, mentioning the location's climate",
@@ -62,7 +64,8 @@ Please provide a comprehensive garden plan in the following JSON format only, no
       "emoji": "relevant emoji",
       "area": "area in sq ft",
       "description": "what goes here",
-      "plants": ["plant1", "plant2", "plant3"]
+      "plants": ["plant1", "plant2", "plant3"],
+      "layout": { "col": 0, "row": 0, "w": 6, "h": 8 }
     }
   ],
   "plantList": [
