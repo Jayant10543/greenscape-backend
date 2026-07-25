@@ -159,6 +159,92 @@ If the photo does not clearly show a plant, or is too unclear to assess, set "di
   }
 });
 
+// ---- Plant Identification: "what plant is this?" ----
+router.post("/identify", analyzeLimiter, express.json({ limit: "12mb" }), async (req, res) => {
+  try {
+    const { image, mediaType } = req.body;
+
+    if (!image || typeof image !== "string" || image.trim().length < 100) {
+      return res.status(400).json({ error: "No valid image provided. Please upload a photo." });
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    const finalMediaType = allowedTypes.includes(mediaType) ? mediaType : "image/jpeg";
+
+    const prompt = `You are an expert botanist helping Indian home gardeners identify plants. Look closely at this photo and identify the plant.
+
+Please respond in the following JSON format only, no other text:
+{
+  "commonName": "the most common English/Hindi name, prefixed with 'Possibly' if you are not highly confident — identifying a plant from one photo can be hard, so be honest about uncertainty",
+  "latinName": "scientific/botanical name, or null if unsure",
+  "family": "plant family (e.g. Solanaceae), or null if unsure",
+  "confidence": "High, Medium, or Low",
+  "type": "one short label like 'Flowering shrub', 'Herb', 'Succulent', 'Indoor foliage', 'Tree', 'Vegetable'",
+  "commonInIndia": true or false (is this plant commonly grown or found in India?),
+  "quickCare": {
+    "sunlight": "short phrase e.g. 'Full sun' / 'Partial shade'",
+    "water": "short phrase e.g. 'Every 2-3 days' / 'Keep soil moist'",
+    "difficulty": "Easy, Moderate, or Hard to care for"
+  },
+  "funFact": "one interesting or useful fact about this plant, relevant to Indian gardeners",
+  "summary": "2-3 sentence plain-language description of the plant for a beginner"
+}
+
+If the photo does not clearly show a plant, set "commonName" to "Unclear" and explain in "summary" what a better photo would need.`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1024,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: finalMediaType, data: image } },
+              { type: "text", text: prompt },
+            ],
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      console.error("Claude API error (identify):", data.error);
+      return res.status(500).json({ error: data.error.message });
+    }
+    if (!data.content || !data.content[0]) {
+      return res.status(500).json({ error: "No response from AI" });
+    }
+    if (data.stop_reason === "max_tokens") {
+      return res.status(500).json({ error: "AI response was cut off before completing. Please try again." });
+    }
+
+    const text = data.content[0].text;
+    const clean = text.replace(/```json|```/g, "").trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch (parseErr) {
+      console.error("Failed to parse identify response as JSON:", parseErr.message);
+      return res.status(500).json({ error: "AI returned a response that wasn't valid JSON. Please try again." });
+    }
+
+    res.json(parsed);
+  } catch (err) {
+    console.error("Plant identification error:", err);
+    res.status(500).json({ error: "Failed to identify plant photo", details: err.message });
+  }
+});
+
 router.get("/history", async (req, res) => {
   try {
     const userId = getUserIdFromToken(req);
